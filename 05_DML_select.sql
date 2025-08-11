@@ -214,7 +214,9 @@ SELECT SUM(BOOKSTOCK) AS "SUM OF BOOKSTOCK" FROM BOOK;
 SELECT SUM(BOOKSTOCK) AS "총재고량" FROM BOOK;
 
 -- 2번 고객이 주문한 총 주문 도서 권수와 주문 도서 번호
-SELECT SUM(BSQTY) AS "총주문수량"
+-- as 통한 별명 "별명" 또는 별명
+-- 별명에 공백이 있으면 반드시 "" 사용해야 함
+SELECT SUM(BSQTY) AS 총주문수량 -- "총 주문 수량"
 FROM BOOKSALE 
 WHERE CLIENTNO='2';
 
@@ -232,4 +234,81 @@ SELECT SUM(BSQTY) AS "총주문수량", AVG(BSQTY) AS "평균주문수량"
 FROM BOOKSALE 
 WHERE CLIENTNO='2';
 
+-- 도서판매 현황 중 주문 권수가 가장 많은 주문권수, 가장적은 주문권수
+select max(bsQty) as 최대주문량, min(bsQty) as 최소주문량 from booksale;
 
+-- 서점에 있는 도서의 전체 가격 총액, 평균가격, 최고가, 최저가 확인
+select sum(bookPrice) as 가격총액, 
+       avg(bookPrice) as 평균가격,
+       max(bookPrice) as 최고가,
+       min(bookPrice) as 최저가
+from book;
+
+-- 도서판매 테이블에서 도서 판매 건수 조회
+-- bsDate가 null을 허용하거나 값이 중복되는 컬럼이라면 count가 원하는 목적과 같이 반환되지 않을 수도 있음
+select count(bsDate) as 총판매건수 from bookSale;
+
+-- 특정필드 값의 수가 아닌 튜플의 수를 세고자 하면 count(*)를 활용
+select count(*) as 총판매건수 from bookSale;
+
+-- 고객 테이블에서 총 취미의 개수 출력 : 취미를 제공한 고객 수
+-- count(속성명): 속성값이 null인 경우는 제외하고 수를 센 결과 반환
+select count(clientHobby) as "취미" from client;
+
+-- 서점의 총 고객수는 몇명인가?
+select count(*) as 총고객수 from client;
+
+-------------------------------------------------------------------------------------------------
+
+-- Group by <속성>
+-- 그룹에 대한 질의를 기술 할 때 사용
+-- 특정 열(속성)의 값을 기준으로 동일한 값의 데이터들끼리 그룹을 구성
+-- 각 그룹에 대해 한행 씩 질의 결과를 생성
+
+-- 각 도서번호별 판매수량 확인
+-- group by 진행 한 경우 select 절에 집계함수를 통해 필요열의 집계 진행 가능, group by에 기준되는 열은 select에 포함시킬 수 있다.
+select sum(bsqty), bookno
+from booksale
+group by bookno
+order by bookno;
+
+select sum(bsqty), bookno
+from booksale
+group by bookno
+order by 2; -- select된 두번째 열을 기준으로 정렬
+
+-- 각 지역별 고객의 수
+select clientAddress as 지역, count(*) as 고객수
+from client
+group by clientAddress;
+
+-- 성별에 따른 고객 수
+select clientgender as 성별, count(*) as 고객수
+from client
+group by clientgender;
+
+-- 성별에 따른 고객 수와 고객들의 지역명
+-- groupby의 기준으로 사용하지 않는 필드는 select에 단독 사용 불가
+/* select clientgender as 성별, count(*) as 고객수, clientAddress as 지역명
+from client
+group by clientgender; */
+
+-- 성별에 따른 지역별 고객의 수
+select clientgender as 성별, count(*) as 고객수, clientAddress as 지역명
+from client
+group by clientgender, clientAddress;
+
+-- Having <검색 조건>
+-- group by 절에 의해 구성된 그룹들에 대해 적용할 조건 기술
+-- 집계함수와 함께 사용
+-- 주의 !
+-- 1. 반드시 group by 절과 함께 사용
+-- 2. where절보다 뒤에 
+-- 3. 검색조건에 집계함수가 와야 함
+
+-- 각 출판사별 도서가격이 25000 이상인 도서가 2권 이상인 도서의 출판사번호와 도서권수
+select pubNo, count(*) as 도서합계
+from book
+where bookPrice >= 25000
+group by pubNo
+having count(*) >= 2;
