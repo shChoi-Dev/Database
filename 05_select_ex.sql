@@ -33,7 +33,7 @@ WHERE BOOKDATE LIKE '2018%';
 
 -- 도서판매 테이블에서 고객번호1, 2를 제외한 모든 튜플 출력
 SELECT * FROM BOOKSALE
-WHERE BSNO NOT IN('1', '2');
+WHERE clientNo NOT IN('1', '2');
 
 -- 고객 테이블에서 취미가 NULL이 아니면서 주소가 '서울'인 고객의 고객명, 주소, 취미 출력
 SELECT CLIENTNAME, CLIENTADDRESS, CLIENTHOBBY FROM CLIENT
