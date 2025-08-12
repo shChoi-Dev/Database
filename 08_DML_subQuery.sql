@@ -172,4 +172,145 @@ FROM CLIENT
 WHERE EXISTS (SELECT CLIENTNO
               FROM BOOKSALE
               WHERE CLIENT.CLIENTNO = BOOKSALE.CLIENTNO);
+              
+-- 도서를 한번도 주문한 적이 없는 고객
+-- 서브쿼리의 조건에 해당되는 행이 없으면 TRUE 반환
+SELECT CLIENTNO, CLIENTNAME
+FROM CLIENT
+WHERE NOT EXISTS (SELECT CLIENTNO
+              FROM BOOKSALE
+              WHERE CLIENT.CLIENTNO = BOOKSALE.CLIENTNO);
+              
+-- 위 예시는 IN NOT IN 사용시와 같은 결과가 나옴
+
+-- NULL값을 포함하고 있는 컬럼 : IN VS EXISTS
+
+-- CLIENT 테이블의 CLIENTHOBBY 컬럼은 NULL 값을 포함
+SELECT CLIETHOBBY FROM CLIENT;
+
+-- 서브쿼리의 SELECT된 컬럼의 값이 NULL 포함 여부에 따라 메인 쿼리의 결과가 달라질 수 있음
+
+-- EXISTS : 서브쿼리 결과에 NULL값 포함
+SELECT CLIENTNO
+FROM CLIENT
+WHERE EXISTS (SELECT CLIENTHOBBY
+              FROM CLIENT);
+
+-- 서브쿼리 결과에 NULL값이 포함되지 않음
+-- 취미정보가 입력된(NULL아닌) 고객의 번호를 조회
+SELECT CLIENTNO
+FROM CLIENT
+WHERE CLIENTHOBBY IN (SELECT CLIENTHOBBY
+                      FROM CLIENT);
+                      
+--------------------------------------------------------------------------------------------
+
+-- ALL/ANY
+-- 관계연산자와 같이 사용
+-- ALL : 서브쿼리의 결과 리스트가 조건검사대상이되는 컬럼의 값과 비교할때 리스트의 모든값이 비교 연산에 대해 참이되는 경우 참
+-- 컬럼값이 10 > ALL(3,4,5,6) -> 참
+-- ANY : 서브쿼리의 결과 리스트가 조건검사대상이되는 컬럼의 값과 비교할때 리스트의 어떤 한 값이라도 비교 연산에 대해 참이되는 경우 참
+-- 컬럼값이 10 > ALL(11,12,5,13) -> 참
+
+-- 2번 고객이 주문한 도서의 최고 주문수량보다 더 많은 도서를 구입한 고객의 고객번호, 주문번호, 주문수량 출력
+
+-- 서브쿼리에서 MAX 집계함수 사용
+SELECT CLIENTNO, BSNO, BSQTY
+FROM BOOKSALE
+WHERE BSQTY > (SELECT MAX(BSQTY)
+               FROM BOOKSALE
+               WHERE CLIENTNO = '2');
+               
+-- 메인쿼리에서 ALL 연산자를 사용
+SELECT CLIENTNO, BSNO, BSQTY
+FROM BOOKSALE
+WHERE BSQTY > ALL (SELECT BSQTY
+                   FROM BOOKSALE
+                   WHERE CLIENTNO = '2');
+-- 서브쿼리의 결과 리스트 중 최대값보다 큰 이라는 의미
+
+-- 2번고객의 주문 내역들과 비교할 때 한번이라도 더 많은 주문을 한 적이 있는 고객(2번 고객이 3번 주문한 주문수량들 중 어떤 수량이어도 더 많이 주문한 고객의 고객번호
+-- 주문수량을 조회)
+-- 2번고객의 최소 주문수량보다 많이 주문했던 고객의 주문정보
+
+-- 2번고객을 포함한 모든 고객에 대해 2번 고객이 주문한 수량중 최소주문수량보다 많이 주문한 주문정보
+SELECT CLIENTNO, BSNO, BSQTY
+FROM BOOKSALE
+WHERE BSQTY > ANY (SELECT BSQTY
+                   FROM BOOKSALE
+                   WHERE CLIENTNO = '2');
+                   
+-- 2번 고객이 주문한 최소 주문수량보다 많이 주문한 고객의 주문정보(2번고객은 제외)
+SELECT CLIENTNO, BSNO, BSQTY
+FROM BOOKSALE
+WHERE BSQTY > (SELECT MIN(BSQTY)
+               FROM BOOKSALE
+               WHERE CLIENTNO = '2');
+               
+-- 2번 고객이 주문한 최소 주문수량보다 많이 주문한 고객의 주문정보(2번고객은 제외)
+SELECT CLIENTNO, BSNO, BSQTY
+FROM BOOKSALE
+WHERE BSQTY > ANY(SELECT BSQTY
+                  FROM BOOKSALE
+                  WHERE CLIENTNO = '2')
+        AND CLIENTNO !=2;
+        
+------------------------------------------------------------------------------------------------
+
+-- 스칼라 서브쿼리 EX
+-- SELECT 절에서 사용
+-- 서브쿼리의 결과로 단일열의 스칼라값으로 변환
+-- SELECT나 UPDATE에서 사용
+-- 고객별로 총 주문 수량
+-- 고객번호, 고객이름, 총주문수량
+
+-- BOOKSALE 테이블로 GROUP BY 고객이름 조회 불가
+SELECT CLIENTNO, SUM(BSQTY) AS "총주문수량"
+FROM BOOKSALE
+GROUP BY CLIENTNO
+ORDER BY CLIENTNO;
+
+-- 스칼라 서브쿼리 사용
+-- 상관서브쿼리
+SELECT CLIENTNO AS 고객번호, 
+       (SELECT CLIENTNAME -- WHERE절에서 비교되는 CLIENTNO가 GROUP기준이므로 반환되는 CLIENTNAME은 그룹별로 반환됨
+        FROM CLIENT
+        WHERE CLIENT.CLIENTNO = BOOKSALE.CLIENTNO) AS 고객명,
+        SUM(BSQTY) AS "총주문수량"
+FROM BOOKSALE
+GROUP BY CLIENTNO
+ORDER BY CLIENTNO;
+
+/* DBMS VIEW 객체 제공
+ 한개의 릴레이션에 모든 정보가 저장되지는 않음
+ 필요한 정보를 얻기위해 조인, SUBQUERY등을 진행하게 됨
+ - 많은 연상 수행이 동반됨
+ - 한번 연산해 놓은 결과를 다시 동일한 데이터를 사용해려고 할 때 빠른 연산을 위해 연산의 순서를 기록해 놓은 것
+ - 물리적 의미는 위와 같지만 사용할 때는 릴레이션처럼 사용 가능
+ - 개발 중에 뷰가 필요한 경우 뷰를 생성하면
+    - 관리 문제나 트랙잭션등의 성능 문제가 발생할 수 있음
+    - 가상의 뷰, 인라인 뷰를 사용
+*/
+
+-- 인라인 뷰 : 반환되는 데이터는 다중행, 다중열이어도 상관없음
+
+-- 도서가격이 25000원 이상인 도서 중 판매된 도서에 대해 도서별로 도서명, 도서가격, 총판매수량, 총판매액 조회
+
+SELECT BOOKNAME, BOOKPRICE, COUNT(*) AS 판매건수, SUM(BSQTY) AS 총판매수량, SUM(BOOKPRICE * BSQTY) AS 총판매액
+FROM BOOKSALE BS,
+    (SELECT BOOKNO, BOOKNAME, BOOKPRICE
+     FROM BOOK
+     WHERE BOOKPRICE > 25000) BOOK
+WHERE BOOK.BOOKNO = BS.BOOKNO
+GROUP BY BOOK.BOOKNO, BOOK.BOOKNAME, BOOK.BOOKPRICE
+
+
+
+
+
+
+
+
+
+
 
