@@ -39,6 +39,13 @@ WHERE CLIENTNO=( -- 서브쿼리
 -- 2. BOOKSALE 테이블에서 1에서 찾은 CLIENTNO에 해당되는 주문의 주문일/주문 수량 조회
 SELECT BSDATE, BSQTY
 FROM BOOKSALE
+    INNER JOIN CLIENT ON BOOKSALE.CLIENTNO = CLIENT.CLIENTNO
+WHERE CLIENTNAME = '호날두';
+
+-- BSDATE, BSQTY는 BOOKSALE 릴레이션에 저장 CLIENTNAME을 BOOKSALE에서 비교할 수 없으므로 BOOKSALE이 알고있는
+-- CLIENTNO를 서브쿼리를 통해서 얻어오고
+SELECT BSDATE, BSQTY
+FROM BOOKSALE
 WHERE CLIENTNO = ( -- 단일행 반환
                   SELECT CLIENTNO
                   FROM CLIENT
@@ -90,10 +97,79 @@ SELECT CLIENTNAME, CLIENTADDRESS
 FROM CLIENT
 WHERE CLIENTNO IN ('3','7','2'...) */
 
+-- 도서를 구매한 적이 있는 고객의 고객명, 주소 조회
+-- 1. BOOKSALE의 고객정보(CLIENTNO)를 조회
+-- 2. CLEINT 테이블에서 조회된 CLIENTNO에 해당되는 고객 레코드만 추출한 후에 필요 컬럼 추출
+
 SELECT CLIENTNAME, CLIENTADDRESS
 FROM CLIENT
 WHERE CLIENTNO IN (
                    SELECT CLIENTNO
                    FROM BOOKSALE
                    );
-                
+                   
+-- 도서를 한번도 구매한적이 없는 고객의 번호와 고객명 조회
+SELECT CLIENTNAME, CLIENTADDRESS
+FROM CLIENT
+WHERE CLIENTNO NOT IN (
+                   SELECT CLIENTNO
+                   FROM BOOKSALE
+                   );
+                   
+---------------------------------------------------------------------------------------
+
+-- 중첩 서브 쿼리
+-- 도서명이 '안드로이드 프로그래밍'인 도서를 구매한 고객의 고객명 조회
+-- 1. '안드로이드 프로그래밍' 도서의 도서번호 확인
+SELECT BOOKNO FROM BOOK WHERE BOOKNAME = '안드로이드 프로그래밍';
+-- 2. BOOKNO 1004번의 도서가 주문된적이 있다면 주문한 고객의 번호를 조회
+SELECT CLIENTNO
+FROM BOOKSALE
+WHERE BOOKNO = '1004';
+-- 3. 고객번호가 7번 8번인 고객들의 고객명을 조회
+SELECT CLIENTNAME
+FROM CLIENT
+WHERE CLIENTNO='7' OR CLIENTNO = '8';
+
+
+SELECT CLIENTNAME
+FROM CLIENT
+WHERE CLIENTNO IN (SELECT CLIENTNO
+                   FROM BOOKSALE
+                   WHERE BOOKNO = (SELECT BOOKNO 
+                                   FROM BOOK 
+                                   WHERE BOOKNAME = '안드로이드 프로그래밍'));
+
+-- 단일행 서브쿼리의 조건 연산으로 in 사용해도 무방함
+SELECT CLIENTNAME
+FROM CLIENT
+WHERE CLIENTNO IN (SELECT CLIENTNO
+                   FROM BOOKSALE
+                   WHERE BOOKNO in (SELECT BOOKNO 
+                                    FROM BOOK 
+                                    WHERE BOOKNAME = '안드로이드 프로그래밍'));
+                                    
+-- 서브쿼리를 사용했더라도 서브쿼리의 결과는 조건값이므로
+-- WHERE절 뒤에 모든 필요한 질의어 추가 가능
+SELECT CLIENTNAME
+FROM CLIENT
+WHERE CLIENTNO IN (SELECT CLIENTNO
+                   FROM BOOKSALE
+                   WHERE BOOKNO in (SELECT BOOKNO 
+                                    FROM BOOK 
+                                    WHERE BOOKNAME = '안드로이드 프로그래밍'))
+ORDER BY CLIENTNAME;    
+
+----------------------------------------------------------------------------------------
+
+-- 다중행 서브쿼리 연산자 (EXISTS, NOT EXISTS)
+-- EXISTS : 서브쿼리의 결과가 행을 반환하면 참이되는 연산자
+--          참조무결성에 대한 조건검사가 병행되어야 함
+--          상관서브쿼리연산이 가능 : 서브쿼리에서 메인쿼리의 컬럼을 사용가능
+-- 도서를 구매한적이 있는 고객
+SELECT CLIENTNO, CLIENTNAME
+FROM CLIENT
+WHERE EXISTS (SELECT CLIENTNO
+              FROM BOOKSALE
+              WHERE CLIENT.CLIENTNO = BOOKSALE.CLIENTNO);
+
