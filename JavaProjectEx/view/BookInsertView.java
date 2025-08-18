@@ -44,6 +44,6 @@ public class BookInsertView {
 		//컨트롤로 메서드에 입력받은 데이터 전달
 		controller.insert(new BookDTO(bookNo, bookName, bookAuthor, bookPrice, bookDate, bookStock, pubNo));
 		
-		sc.close();
+		//sc.close();
 	}
 }

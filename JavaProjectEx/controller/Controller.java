@@ -1,8 +1,12 @@
 package controller;
 
 import model.BookDTO;
+
+import java.util.Vector;
+
 import model.BookDAO;
 import model.IBookDAO;
+import view.BookListView;
 import view.ResultView;
 
 //View별로 컨트롤러 각각 구성해서 사용하면 DAO 접근 통로가 많아지고 
@@ -48,7 +52,53 @@ public class Controller {
 	}
 	
 	public void getAllBook() {
-		
+		try {
+			//DAO의 getAllBook() 메소드 호출
+			Vector<BookDTO> dataSet = dao.getAllBook();
+			
+			if(dataSet.size()!=0) {//반환 레코드가 있으면
+				BookListView.showAllBook(dataSet);
+			}else {
+				ResultView.succMsg("검색 결과가 없습니다.");
+			}
+			
+		}catch(Exception e) {
+			e.printStackTrace();
+			ResultView.errorMsg("감시 후에 재 요청 바랍니다");
+		}
 	}
 	
+	public void update(BookDTO newDto) {
+		try {
+			BookDTO dto = new BookDTO();
+			dto.setBookNo(newDto.getBookNo());
+			dto.setBookName(newDto.getBookName());
+			dto.setBookAuthor(newDto.getBookAuthor());
+			dto.setBookPrice(newDto.getBookPrice());
+			dto.setBookDate(newDto.getBookDate());
+			dto.setBookStock(newDto.getBookStock());
+			dto.setPubNo(newDto.getPubNo());
+			
+			if(dao.update(dto)) {
+				ResultView.succMsg("도서 정보가 등록되었습니다");
+			}
+		}catch(Exception e) {
+			e.printStackTrace();
+			ResultView.errorMsg("도서 정보 수정 오류");
+		}
+	}
+	
+	public void delete(String bookNo) {
+		try {
+			BookDTO dto = new BookDTO();
+			dto.setBookNo(bookNo); //필드값이 bookNo만 저장된 dto 구성
+			
+			if(dao.delete(dto)) {
+				ResultView.succMsg(bookNo + "도서를 삭제하였습니다. 결과는 도서정보 조회에서 확인하세요.");
+			}
+		}catch(Exception e) {
+			e.printStackTrace();
+			ResultView.errorMsg("도서 정보 삭제 오류");
+		}
+	}
 }
